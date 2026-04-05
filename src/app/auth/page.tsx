@@ -1,4 +1,4 @@
-'use client';
+  'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -6,8 +6,9 @@ import { motion } from 'framer-motion';
 import { Tv, Heart, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { signInWithPopup } from 'firebase/auth';
-import { getDatabase, ref, set } from 'firebase/database';
+import { getDatabase, ref, set, get, update } from 'firebase/database';
 import { auth, googleProvider } from '@/lib/firebase-client';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AuthPage() {
   const [role, setRole] = useState<'creator' | 'donor' | null>(null);
@@ -15,12 +16,34 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (!toastMessage) return;
     const timer = window.setTimeout(() => setToastMessage(null), 4000);
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const checkExistingUser = async () => {
+      try {
+        const database = getDatabase();
+        const userRef = ref(database, `users/${user.uid}`);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+          const currentRole = snapshot.val()?.currentRole as 'creator' | 'donor' | null;
+          const destination = currentRole === 'creator' ? `/creator/${user.uid}/dashboard` : '/';
+          await router.replace(destination);
+        }
+      } catch (err) {
+        console.error('Error checking existing user record:', err);
+      }
+    };
+
+    checkExistingUser();
+  }, [authLoading, router, user]);
 
   const showErrorToast = (message: string) => {
     setToastMessage(message);
@@ -46,18 +69,42 @@ export default function AuthPage() {
 
       const database = getDatabase();
       const userRef = ref(database, `users/${user.uid}`);
+      const snapshot = await get(userRef);
+      const existingUser = snapshot.exists() ? snapshot.val() : null;
+      const isFirstSignup = !existingUser;
 
-      await set(userRef, {
+      const roles = {
+        ...(existingUser?.roles ?? {}),
+        [role]: true,
+      };
+
+      const payload = {
         uid: user.uid,
         email: user.email || null,
         displayName: user.displayName || null,
-        role,
-        createdAt: new Date().toISOString(),
-      });
+        currentRole: role,
+        roles,
+        updatedAt: new Date().toISOString(),
+      } as Record<string, any>;
 
-      await router.push('/');
+      if (isFirstSignup) {
+        payload.createdAt = new Date().toISOString();
+      }
+
+      if (existingUser) {
+        await update(userRef, payload);
+      } else {
+        await set(userRef, payload);
+      }
+
+      const destination = isFirstSignup
+        ? `/onboarding?role=${role}&uid=${user.uid}`
+        : role === 'creator'
+        ? `/creator/${user.uid}/dashboard`
+        : '/';
+      await router.push(destination);
       if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        window.location.href = destination;
       }
     } catch (error: any) {
       console.error('Login failed:', error);

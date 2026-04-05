@@ -2,11 +2,22 @@
 
 import { motion } from 'framer-motion';
 import { Tv, CreditCard, CheckCircle2, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+
+  const role = useMemo(() => {
+    const param = searchParams.get('role');
+    return param === 'creator' || param === 'donor' ? param : 'creator';
+  }, [searchParams]);
+
+  const uid = searchParams.get('uid');
+  const destination = role === 'creator' && uid ? `/creator/${uid}/dashboard` : '/';
+  const roleLabel = role === 'creator' ? 'Creator' : 'Donator';
 
   return (
     <main className="min-h-[calc(100vh-64px)] bg-stone-50 flex items-center justify-center p-4">
@@ -83,8 +94,8 @@ export default function Onboarding() {
             <h2 className="text-3xl font-black text-gray-900">You're Ready to Go Live!</h2>
             <p className="text-gray-500 max-w-sm mx-auto">Your channel is synced and your payouts are secured. Let's head to your command center.</p>
             
-            <Link href="/creator-dashboard" className="w-full mt-8 py-4 rounded-full bg-black text-white font-bold text-lg hover:bg-gray-900 transition-colors shadow-md hover:shadow-lg active:scale-95 flex items-center justify-center">
-              Go to Dashboard
+            <Link href={destination} className="w-full mt-8 py-4 rounded-full bg-black text-white font-bold text-lg hover:bg-gray-900 transition-colors shadow-md hover:shadow-lg active:scale-95 flex items-center justify-center">
+              Go to {roleLabel} Dashboard
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </div>
