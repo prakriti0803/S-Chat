@@ -1,16 +1,74 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LogIn, Tv, Heart, CheckCircle2 } from 'lucide-react';
+import { Tv, Heart, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { signInWithPopup } from 'firebase/auth';
+import { getDatabase, ref, set } from 'firebase/database';
+import { auth, googleProvider } from '@/lib/firebase-client';
 
 export default function AuthPage() {
   const [role, setRole] = useState<'creator' | 'donor' | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = window.setTimeout(() => setToastMessage(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toastMessage]);
+
+  const showErrorToast = (message: string) => {
+    setToastMessage(message);
+    setError(message);
+  };
+
+  const handleSignIn = async () => {
+    if (!role) {
+      showErrorToast('Please select a role.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      if (!user) {
+        throw new Error('No user returned from Google sign-in.');
+      }
+
+      const database = getDatabase();
+      const userRef = ref(database, `users/${user.uid}`);
+
+      await set(userRef, {
+        uid: user.uid,
+        email: user.email || null,
+        displayName: user.displayName || null,
+        role,
+        createdAt: new Date().toISOString(),
+      });
+
+      await router.push('/');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      showErrorToast(error?.message ?? 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-4 bg-stone-50 overflow-hidden">
-      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -25,14 +83,13 @@ export default function AuthPage() {
           Select how you want to use the platform to customize your experience.
         </p>
 
-        {/* Roles Selection */}
         <div className="flex flex-col sm:flex-row gap-4 w-full mb-8">
-          {/* Creator Role Card */}
           <button
+            type="button"
             onClick={() => setRole('creator')}
             className={`relative flex-1 flex flex-col items-center p-6 rounded-2xl border-2 transition-all ${
               role === 'creator'
-                ? 'border-blue-600 bg-blue-50/50'
+                ? 'border-blue-600 bg-blue-50/50 shadow-md'
                 : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50/50'
             }`}
           >
@@ -48,12 +105,12 @@ export default function AuthPage() {
             <p className="text-xs text-gray-500 mt-1">Receive donations & alerts</p>
           </button>
 
-          {/* Donor Role Card */}
           <button
+            type="button"
             onClick={() => setRole('donor')}
             className={`relative flex-1 flex flex-col items-center p-6 rounded-2xl border-2 transition-all ${
               role === 'donor'
-                ? 'border-green-600 bg-green-50/50'
+                ? 'border-green-600 bg-green-50/50 shadow-md'
                 : 'border-gray-100 hover:border-green-200 hover:bg-gray-50/50'
             }`}
           >
@@ -70,13 +127,20 @@ export default function AuthPage() {
           </button>
         </div>
 
-        {/* Action Button */}
+        {toastMessage ? (
+          <div className="mb-6 w-full rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 shadow-sm">
+            {toastMessage}
+          </div>
+        ) : null}
+
         <button
-          disabled={!role}
+          type="button"
+          onClick={handleSignIn}
+          disabled={loading}
           className={`w-full flex items-center justify-center py-3.5 px-4 rounded-xl text-base font-bold transition-all ${
-            role
-              ? 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] shadow-md'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            loading
+              ? 'bg-gray-800 text-white opacity-80 cursor-wait'
+              : 'bg-black text-white hover:scale-[1.02] active:scale-[0.98] shadow-md'
           }`}
         >
           <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -85,7 +149,7 @@ export default function AuthPage() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
-          {role ? `Continue as ${role === 'creator' ? 'Creator' : 'Donator'}` : 'Continue with Google'}
+          {loading ? 'Signing in...' : `Continue as ${role === 'creator' ? 'Creator' : 'Donator'}`}
         </button>
 
         <p className="mt-6 text-xs text-center text-gray-500 px-4">
@@ -94,7 +158,6 @@ export default function AuthPage() {
           {' '}and{' '}
           <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>.
         </p>
-
       </motion.div>
     </main>
   );
