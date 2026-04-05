@@ -1,101 +1,111 @@
-import Image from "next/image";
+'use client';
+
+import { motion } from 'framer-motion';
+import { ArrowRight, ShieldCheck, Zap, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 pt-16 md:p-24 bg-stone-50 overflow-hidden">
+      
+      {/* Hero Section */}
+      <section className="flex flex-col items-center text-center space-y-8 max-w-4xl z-10 relative">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 mb-4"
+        >
+          <Sparkles className="mr-2 h-4 w-4" />
+          The future of live streaming alerts is here
+        </motion.div>
+        
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-5xl md:text-7xl font-black tracking-tight text-gray-900"
+        >
+          Premium Donations, <br />
+          <span className="text-blue-600">Zero Liability.</span>
+        </motion.h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="text-xl text-gray-600 max-w-2xl leading-relaxed"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          Frictionless UPI donations directly to your account. Eradicate trolls with verified identity shields. Elevate your stream with stunning 3D alerts.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="flex flex-col sm:flex-row items-center gap-4 mt-8 w-full justify-center"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <Link href="/auth?role=creator" className="flex items-center justify-center w-full md:w-auto rounded-full bg-blue-600 px-8 py-4 text-base font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95">
+            I am a Creator
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
+          <Link href="/auth?role=donor" className="flex items-center justify-center w-full md:w-auto rounded-full border-2 border-gray-200 bg-white px-8 py-4 text-base font-bold text-gray-900 shadow-sm transition-transform hover:scale-105 hover:border-gray-300 active:scale-95">
+            Donate to Streamer
+          </Link>
+        </motion.div>
+      </section>
+
+      {/* Feature Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mt-32 z-10 w-full mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col items-center text-center p-8 bg-white rounded-3xl shadow-sm border border-gray-100"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <div className="h-14 w-14 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center mb-6">
+            <Zap className="h-7 w-7" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-3">Direct Payouts</h3>
+          <p className="text-gray-600">
+            Powered by Razorpay Route. Funds flow directly to your account instantly with zero holding risk.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col items-center text-center p-8 bg-white rounded-3xl shadow-sm border border-gray-100"
+        >
+          <div className="h-14 w-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mb-6">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-3">Identity Shield</h3>
+          <p className="text-gray-600">
+            Mandatory Google Auth for donors eliminates anonymous chat toxicity and chargeback fraud.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col items-center text-center p-8 bg-white rounded-3xl shadow-sm border border-gray-100"
+        >
+          <div className="h-14 w-14 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mb-6">
+            <Sparkles className="h-7 w-7" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-3">3D Stream Alerts</h3>
+          <p className="text-gray-600">
+            Ditch flat popups. Equip elite 3D animated OBS overlays powered by React Three Fiber.
+          </p>
+        </motion.div>
+      </section>
+
+    </main>
   );
 }
