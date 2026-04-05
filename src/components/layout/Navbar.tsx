@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, LogOut, LayoutDashboard, Settings, ShieldAlert, Menu, X, Video } from 'lucide-react';
+import { LogIn, LogOut, LayoutDashboard, Settings, ShieldAlert, Menu, X, Video, Layers, LifeBuoy } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navbar() {
@@ -37,7 +37,7 @@ export default function Navbar() {
               Streams
             </Link>
             <Link href="/creator-dashboard/overlays" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/overlays' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
-              <Settings className="mr-2 h-4 w-4" />
+              <Layers className="mr-2 h-4 w-4" />
               Overlays
             </Link>
             <Link href="/creator-dashboard/moderation" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/moderation' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
@@ -47,6 +47,14 @@ export default function Navbar() {
             <Link href="/creator-dashboard/financials" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/financials' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
               Financials
+            </Link>
+            <Link href="/creator-dashboard/settings" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/settings' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Link>
+            <Link href="/creator-dashboard/support" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/support' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+              <LifeBuoy className="mr-2 h-4 w-4" />
+              Support
             </Link>
           </div>
 
@@ -95,7 +103,7 @@ export default function Navbar() {
                     <Video className="mr-3 h-5 w-5" /> Streams
                   </Link>
                   <Link href="/creator-dashboard/overlays" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/overlays' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
-                    <Settings className="mr-3 h-5 w-5" /> Overlays
+                    <Layers className="mr-3 h-5 w-5" /> Overlays
                   </Link>
                   <Link href="/creator-dashboard/moderation" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/moderation' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <ShieldAlert className="mr-3 h-5 w-5" /> Moderation
@@ -103,6 +111,12 @@ export default function Navbar() {
                   <Link href="/creator-dashboard/financials" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/financials' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     Financials
+                  </Link>
+                  <Link href="/creator-dashboard/settings" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/settings' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                    <Settings className="mr-3 h-5 w-5" /> Settings
+                  </Link>
+                  <Link href="/creator-dashboard/support" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/support' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                    <LifeBuoy className="mr-3 h-5 w-5" /> Support
                   </Link>
                 </div>
                 <div className="mt-auto p-4 border-t">
