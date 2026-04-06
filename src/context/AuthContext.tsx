@@ -1,13 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  firebaseUID: string | null;
+  supabaseUID: string | null;
   googleEmail: string | null;
 }
 
@@ -18,24 +18,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    console.log('🔥 AuthContext mounted - setting up onAuthStateChanged listener');
+    console.log('🔥 AuthContext mounted - checking active session');
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log('🔥 Auth state changed:', currentUser ? `User: ${currentUser.email}` : 'No user');
-      setUser(currentUser);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
     });
 
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        console.log('🔥 Auth state changed:', session?.user ? `User: ${session.user.email}` : 'No user');
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
     return () => {
       console.log('🔥 AuthContext unmounting - removing listener');
-      unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
   const value: AuthContextType = {
     user,
     loading,
-    firebaseUID: user?.uid || null,
+    supabaseUID: user?.id || null,
     googleEmail: user?.email || null,
   };
 

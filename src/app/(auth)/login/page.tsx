@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { signInWithPopup } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { LogIn, AlertCircle } from 'lucide-react';
-import { auth, googleProvider } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState<boolean>(false);
@@ -18,28 +17,17 @@ export default function LoginPage() {
       setError(null);
       console.log('🔐 Initiating Google Sign-In popup...');
 
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?isLogin=true`,
+        },
+      });
 
-      // Log for verification (remove in production)
-      console.log('✅ Firebase UID:', user.uid);
-      console.log('✅ Google Email:', user.email);
-
-      // Redirect to homepage on successful authentication
-      router.push('/');
+      if (signInError) throw signInError;
     } catch (err: any) {
       console.error('❌ Authentication error:', err);
-      
-      // Handle specific Firebase errors
-      if (err.code === 'auth/popup-blocked') {
-        setError('Popup was blocked. Please allow popups for this site.');
-      } else if (err.code === 'auth/popup-closed-by-user') {
-        setError('Sign-in was cancelled. Please try again.');
-      } else if (err.code === 'auth/network-request-failed') {
-        setError('Network error. Please check your connection.');
-      } else {
-        setError('Failed to sign in. Please try again.');
-      }
+      setError(err.message || 'Failed to sign in. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,17 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, LogOut, LayoutDashboard, Settings, ShieldAlert, Menu, X, Video, Layers, LifeBuoy } from 'lucide-react';
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const isCreatorDashboard = pathname?.startsWith('/creator-dashboard');
+  const router = useRouter();
+  const { user } = useAuth();
+  const isCreatorDashboard = pathname?.startsWith('/creator-dashboard') || pathname?.includes('/creator/') && pathname?.includes('/dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+    setMobileMenuOpen(false);
+  };
+
+  // Extract creatorId from dynamic route
+  const creatorIdMatch = pathname?.match(/\/creator\/([^/]+)\/dashboard/);
+  const creatorId = creatorIdMatch?.[1] || null;
+
   if (isCreatorDashboard) {
+    // Determine base dashboard URL based on route type
+    const dashboardBase = creatorId ? `/creator/${creatorId}/dashboard` : '/creator-dashboard';
+    
+    // Helper function to check if a route is active
+    const isActive = (route: string) => {
+      if (creatorId) {
+        return pathname?.startsWith(`${dashboardBase}${route}`);
+      }
+      return pathname === `/creator-dashboard${route}`;
+    };
+
     return (
       <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
@@ -22,37 +47,37 @@ export default function Navbar() {
             >
               <Menu className="h-6 w-6" />
             </button>
-            <Link href="/creator-dashboard" className="flex items-center">
+            <Link href={dashboardBase} className="flex items-center">
               <span className="text-2xl font-black tracking-tighter text-black">SCHAT<span className="text-blue-600">.</span></span>
             </Link>
           </div>
           
           <div className="hidden md:flex flex-1 justify-center items-center space-x-2 lg:space-x-6">
-            <Link href="/creator-dashboard" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+            <Link href={dashboardBase} className={`flex items-center text-sm font-semibold py-5 ${isActive('') || isActive('') ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <LayoutDashboard className="mr-2 h-4 w-4" />
               Overview
             </Link>
-            <Link href="/creator-dashboard/streams" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/streams' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+            <Link href={`${dashboardBase}/streams`} className={`flex items-center text-sm font-semibold py-5 ${isActive('/streams') ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <Video className="mr-2 h-4 w-4" />
               Streams
             </Link>
-            <Link href="/creator-dashboard/overlays" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/overlays' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+            <Link href={`${dashboardBase}/overlays`} className={`flex items-center text-sm font-semibold py-5 ${isActive('/overlays') ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <Layers className="mr-2 h-4 w-4" />
               Overlays
             </Link>
-            <Link href="/creator-dashboard/moderation" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/moderation' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+            <Link href={`${dashboardBase}/moderation`} className={`flex items-center text-sm font-semibold py-5 ${isActive('/moderation') ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <ShieldAlert className="mr-2 h-4 w-4" />
               Moderation
             </Link>
-            <Link href="/creator-dashboard/financials" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/financials' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+            <Link href={`${dashboardBase}/financials`} className={`flex items-center text-sm font-semibold py-5 ${isActive('/financials') ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
               Financials
             </Link>
-            <Link href="/creator-dashboard/settings" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/settings' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+            <Link href={`${dashboardBase}/settings`} className={`flex items-center text-sm font-semibold py-5 ${isActive('/settings') ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </Link>
-            <Link href="/creator-dashboard/support" className={`flex items-center text-sm font-semibold py-5 ${pathname === '/creator-dashboard/support' ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
+            <Link href={`${dashboardBase}/support`} className={`flex items-center text-sm font-semibold py-5 ${isActive('/support') ? 'text-gray-900 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 transition-colors border-b-2 border-transparent'}`}>
               <LifeBuoy className="mr-2 h-4 w-4" />
               Support
             </Link>
@@ -60,13 +85,13 @@ export default function Navbar() {
 
           <div className="flex items-center space-x-4">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link
-                href="/"
+              <button
+                onClick={handleLogout}
                 className="hidden md:inline-flex h-9 items-center justify-center rounded-full bg-white border border-gray-200 px-4 py-2 text-sm font-bold text-red-600 shadow-sm transition-colors hover:bg-red-50 hover:border-red-100"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
-              </Link>
+              </button>
             </motion.div>
           </div>
         </div>
@@ -96,33 +121,33 @@ export default function Navbar() {
                   </button>
                 </div>
                 <div className="flex flex-col py-4 px-3 space-y-1 overflow-y-auto">
-                  <Link href="/creator-dashboard" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                  <Link href={dashboardBase} onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${isActive('') || isActive('') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <LayoutDashboard className="mr-3 h-5 w-5" /> Overview
                   </Link>
-                  <Link href="/creator-dashboard/streams" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/streams' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                  <Link href={`${dashboardBase}/streams`} onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${isActive('/streams') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <Video className="mr-3 h-5 w-5" /> Streams
                   </Link>
-                  <Link href="/creator-dashboard/overlays" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/overlays' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                  <Link href={`${dashboardBase}/overlays`} onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${isActive('/overlays') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <Layers className="mr-3 h-5 w-5" /> Overlays
                   </Link>
-                  <Link href="/creator-dashboard/moderation" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/moderation' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                  <Link href={`${dashboardBase}/moderation`} onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${isActive('/moderation') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <ShieldAlert className="mr-3 h-5 w-5" /> Moderation
                   </Link>
-                  <Link href="/creator-dashboard/financials" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/financials' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                  <Link href={`${dashboardBase}/financials`} onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${isActive('/financials') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     Financials
                   </Link>
-                  <Link href="/creator-dashboard/settings" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/settings' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                  <Link href={`${dashboardBase}/settings`} onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${isActive('/settings') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <Settings className="mr-3 h-5 w-5" /> Settings
                   </Link>
-                  <Link href="/creator-dashboard/support" onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${pathname === '/creator-dashboard/support' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
+                  <Link href={`${dashboardBase}/support`} onClick={() => setMobileMenuOpen(false)} className={`flex items-center px-4 py-3 rounded-xl font-bold ${isActive('/support') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-stone-50'}`}>
                     <LifeBuoy className="mr-3 h-5 w-5" /> Support
                   </Link>
                 </div>
                 <div className="mt-auto p-4 border-t">
-                  <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center w-full py-3 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors">
+                  <button onClick={handleLogout} className="flex items-center justify-center w-full py-3 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors">
                     <LogOut className="mr-2 h-5 w-5" /> Logout
-                  </Link>
+                  </button>
                 </div>
               </motion.div>
             </>
@@ -147,13 +172,23 @@ export default function Navbar() {
           </Link>
           
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link
-              href="/(auth)/login"
-              className="inline-flex h-9 items-center justify-center rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-gray-800"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Join with Google
-            </Link>
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-red-50 border border-red-200 px-4 py-2 text-sm font-medium text-red-600 shadow transition-colors hover:bg-red-100"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex h-9 items-center justify-center rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-gray-800"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Join with Google
+              </Link>
+            )}
           </motion.div>
         </div>
       </div>

@@ -1,13 +1,11 @@
   'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Tv, Heart, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { signInWithPopup } from 'firebase/auth';
-import { getDatabase, ref, set, get, update } from 'firebase/database';
-import { auth, googleProvider } from '@/lib/firebase-client';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthPage() {
@@ -29,12 +27,15 @@ export default function AuthPage() {
 
     const checkExistingUser = async () => {
       try {
-        const database = getDatabase();
-        const userRef = ref(database, `users/${user.uid}`);
-        const snapshot = await get(userRef);
-        if (snapshot.exists()) {
-          const currentRole = snapshot.val()?.currentRole as 'creator' | 'donor' | null;
-          const destination = currentRole === 'creator' ? `/creator/${user.uid}/dashboard` : '/';
+        const { data, error } = await supabase
+          .from('users')
+          .select('current_role')
+          .eq('id', user.id)
+          .single();
+          
+        if (data) {
+          const currentRole = data.current_role;
+          const destination = currentRole === 'creator' ? `/creator/${user.id}/dashboard` : '/';
           await router.replace(destination);
         }
       } catch (err) {
@@ -60,52 +61,14 @@ export default function AuthPage() {
     setError(null);
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?role=${role}`,
+        },
+      });
 
-      if (!user) {
-        throw new Error('No user returned from Google sign-in.');
-      }
-
-      const database = getDatabase();
-      const userRef = ref(database, `users/${user.uid}`);
-      const snapshot = await get(userRef);
-      const existingUser = snapshot.exists() ? snapshot.val() : null;
-      const isFirstSignup = !existingUser;
-
-      const roles = {
-        ...(existingUser?.roles ?? {}),
-        [role]: true,
-      };
-
-      const payload = {
-        uid: user.uid,
-        email: user.email || null,
-        displayName: user.displayName || null,
-        currentRole: role,
-        roles,
-        updatedAt: new Date().toISOString(),
-      } as Record<string, any>;
-
-      if (isFirstSignup) {
-        payload.createdAt = new Date().toISOString();
-      }
-
-      if (existingUser) {
-        await update(userRef, payload);
-      } else {
-        await set(userRef, payload);
-      }
-
-      const destination = isFirstSignup
-        ? `/onboarding?role=${role}&uid=${user.uid}`
-        : role === 'creator'
-        ? `/creator/${user.uid}/dashboard`
-        : '/';
-      await router.push(destination);
-      if (typeof window !== 'undefined') {
-        window.location.href = destination;
-      }
+      if (signInError) throw signInError;
     } catch (error: any) {
       console.error('Login failed:', error);
       showErrorToast(error?.message ?? 'Login failed. Please try again.');
