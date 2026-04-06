@@ -24,7 +24,30 @@ function CallbackContent() {
 
         const user = session.user;
         const requestedRole = searchParams.get('role');
+        const youtubeConnect = searchParams.get('youtube_connect') === 'true';
         const isLoginFlow = searchParams.get('isLogin') === 'true';
+
+        const providerToken = (session as any)?.provider_token as string | undefined;
+        let youtubeChannelId: string | undefined;
+
+        if (youtubeConnect && providerToken) {
+          try {
+            const youtubeResponse = await fetch(
+              'https://www.googleapis.com/youtube/v3/channels?part=id&mine=true',
+              {
+                headers: {
+                  Authorization: `Bearer ${providerToken}`,
+                  Accept: 'application/json',
+                },
+              }
+            );
+
+            const youtubeData = await youtubeResponse.json();
+            youtubeChannelId = youtubeData.items?.[0]?.id;
+          } catch (youtubeError) {
+            console.error('Error fetching YouTube channel during connect:', youtubeError);
+          }
+        }
 
         // Check if the user exists in our public users table
         const { data: existingUser, error: checkError } = await supabase
@@ -41,25 +64,32 @@ function CallbackContent() {
         }
 
         if (existingUser) {
+          if (youtubeConnect && youtubeChannelId) {
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ youtube_channel_id: youtubeChannelId })
+              .eq('id', user.id);
+
+            if (updateError) {
+              console.error('Error saving YouTube channel ID:', updateError);
+            }
+          }
+
           // USER EXISTS: Ignore any requested role from signup parameters
           // Redirect them directly to their destination based on saved preference
           const role = existingUser.current_role;
           
           if (role === 'creator') {
-            // Get the username for the secure route, fallback to ID if they haven't finished onboarding
             const routeId = existingUser.username || user.id;
             router.replace(`/creator/${routeId}/dashboard`);
           } else {
             router.replace('/');
           }
         } else {
-          // NEW USER: We must have a requested role (from signup)
-          // If they somehow hit login without an account, we can default to 'donor' or 'creator'
-          const finalRole = requestedRole === 'creator' || requestedRole === 'donor' 
-            ? requestedRole 
-            : 'donor'; // safe default
+          const finalRole = requestedRole === 'creator' || requestedRole === 'donor'
+            ? requestedRole
+            : 'donor';
 
-          // Insert them into our database
           const { error: insertError } = await supabase
             .from('users')
             .insert([
@@ -68,6 +98,7 @@ function CallbackContent() {
                 email: user.email,
                 display_name: user.user_metadata?.full_name || '',
                 current_role: finalRole,
+                youtube_channel_id: youtubeChannelId || null,
               }
             ]);
 
@@ -75,11 +106,9 @@ function CallbackContent() {
              console.error("Error creating new user:", insertError);
           }
 
-          // Direct NEW users with creator preference to ONBOARDING
           if (finalRole === 'creator') {
             router.replace(`/onboarding?role=creator&uid=${user.id}`);
           } else {
-            // Direct NEW users with donor preference to HOME
             router.replace('/');
           }
         }

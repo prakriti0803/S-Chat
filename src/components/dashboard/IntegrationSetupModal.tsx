@@ -12,14 +12,15 @@ export default function IntegrationSetupModal({ creatorData, onComplete }: Integ
   const [step, setStep] = useState(1);
   const [razorpayKeyId, setRazorpayKeyId] = useState(creatorData?.razorpay_key_id || '');
   const [razorpayKeySecret, setRazorpayKeySecret] = useState(creatorData?.razorpay_key_secret || '');
-  const [youtubeChannelId, setYoutubeChannelId] = useState(creatorData?.youtube_channel_id || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isYoutubeConnected = Boolean(creatorData?.youtube_channel_id);
+  const youtubeChannelId = creatorData?.youtube_channel_id || '';
 
   const handleSave = async () => {
     if (!creatorData?.id) {
       setError('Profile mapping error. Please refresh the page.');
-      return;
+      return false;
     }
     
     setLoading(true);
@@ -31,18 +32,39 @@ export default function IntegrationSetupModal({ creatorData, onComplete }: Integ
         .update({
           razorpay_key_id: razorpayKeyId || null,
           razorpay_key_secret: razorpayKeySecret || null,
-          youtube_channel_id: youtubeChannelId || null,
         })
         .eq('id', creatorData.id)
         .select()
         .single();
 
       if (error) throw error;
-      onComplete(data);
+      return true;
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to save integrations.');
+      return false;
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleYoutubeConnect = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?youtube_connect=true`,
+          scopes: 'https://www.googleapis.com/auth/youtube.readonly',
+        },
+      });
+
+      if (error) throw error;
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to initiate YouTube linking.');
       setLoading(false);
     }
   };
@@ -95,13 +117,31 @@ export default function IntegrationSetupModal({ creatorData, onComplete }: Integ
             </div>
 
             <button 
-              onClick={() => setStep(2)}
-              disabled={!razorpayKeyId || !razorpayKeySecret}
+              onClick={async () => {
+                const saved = await handleSave();
+                if (saved) {
+                  setStep(2);
+                }
+              }}
+              disabled={!razorpayKeyId || !razorpayKeySecret || loading}
               className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center transition-colors"
             >
-              Continue
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Continue'}
               <ArrowRight className="ml-2 h-5 w-5" />
             </button>
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              disabled={loading}
+              className="w-full py-4 rounded-xl border border-gray-200 bg-white text-gray-900 font-bold hover:bg-gray-50 transition-colors"
+            >
+              Skip Razorpay and connect YouTube first
+            </button>
+            {error ? (
+              <p className="text-sm text-center text-red-600 font-semibold bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                {error}
+              </p>
+            ) : null}
             <p className="text-xs text-center text-gray-400">Keys are securely stored using Supabase RLS encryption standards.</p>
           </div>
         )}
@@ -113,19 +153,29 @@ export default function IntegrationSetupModal({ creatorData, onComplete }: Integ
             </div>
             <div className="text-center">
               <h2 className="text-2xl font-black text-gray-900">Link YouTube Channel</h2>
-              <p className="text-gray-500 mt-2">Paste your YouTube Channel ID so we can track live metrics and subscriber growth automatically.</p>
+              <p className="text-gray-500 mt-2">Connect your YouTube channel directly so we can sync live metrics and subscriber data automatically.</p>
             </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-bold text-gray-700 block mb-1">YouTube Channel ID</label>
-                <input 
-                  type="text" 
-                  value={youtubeChannelId}
-                  onChange={(e) => setYoutubeChannelId(e.target.value)}
-                  placeholder="UCxxxxxxxxxxxxxxxxx" 
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-stone-50 outline-none focus:border-red-600 font-mono text-sm" 
-                />
+
+            <div className={`rounded-3xl border p-4 text-sm ${isYoutubeConnected ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-yellow-200 bg-yellow-50 text-yellow-900'}`}>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{isYoutubeConnected ? '✅' : '⚠️'}</span>
+                  <div>
+                    <p className="font-semibold">
+                      {isYoutubeConnected ? 'YouTube channel already linked.' : 'Google will ask for permission to access your YouTube account.'}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-700">
+                      {isYoutubeConnected
+                        ? 'You can reconnect to refresh permissions or update your linked channel.'
+                        : 'This app wants to view your YouTube account.'}
+                    </p>
+                  </div>
+                </div>
+                {isYoutubeConnected && (
+                  <div className="rounded-2xl bg-white/80 border border-emerald-100 px-3 py-2 text-emerald-900 font-semibold">
+                    Linked Channel ID: {youtubeChannelId}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -139,11 +189,11 @@ export default function IntegrationSetupModal({ creatorData, onComplete }: Integ
                 Back
               </button>
               <button 
-                onClick={handleSave}
-                disabled={loading || !youtubeChannelId}
+                onClick={handleYoutubeConnect}
+                disabled={loading}
                 className="w-2/3 py-4 rounded-xl bg-black text-white font-bold hover:bg-gray-900 disabled:opacity-50 flex items-center justify-center transition-colors"
               >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Complete Setup'}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isYoutubeConnected ? 'Reconnect YouTube Channel' : 'Link to YouTube Channel'}
               </button>
             </div>
             <div className="text-center">
