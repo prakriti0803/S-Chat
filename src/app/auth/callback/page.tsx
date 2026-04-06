@@ -18,7 +18,7 @@ function CallbackContent() {
         
         if (sessionError) throw sessionError;
         if (!session?.user) {
-          router.replace('/login');
+          router.replace('/auth?isLogin=true');
           return;
         }
 
@@ -29,7 +29,7 @@ function CallbackContent() {
         // Check if the user exists in our public users table
         const { data: existingUser, error: checkError } = await supabase
           .from('users')
-          .select('id, current_role')
+          .select('id, current_role, username')
           .eq('id', user.id)
           .maybeSingle(); // maybeSingle because 0 rows is expected for new users
 
@@ -46,7 +46,9 @@ function CallbackContent() {
           const role = existingUser.current_role;
           
           if (role === 'creator') {
-            router.replace(`/creator/${user.id}/dashboard`);
+            // Get the username for the secure route, fallback to ID if they haven't finished onboarding
+            const routeId = existingUser.username || user.id;
+            router.replace(`/creator/${routeId}/dashboard`);
           } else {
             router.replace('/');
           }
@@ -83,7 +85,7 @@ function CallbackContent() {
         }
       } catch (err) {
         console.error('Error during auth callback:', err);
-        router.replace('/login');
+        router.replace('/auth?isLogin=true');
       }
     };
 
