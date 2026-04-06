@@ -29,13 +29,14 @@ export default function AuthPage() {
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('current_role')
+          .select('current_role, username')
           .eq('id', user.id)
           .single();
           
         if (data) {
           const currentRole = data.current_role;
-          const destination = currentRole === 'creator' ? `/creator/${user.id}/dashboard` : '/';
+          const routeId = data.username || user.id;
+          const destination = currentRole === 'creator' ? `/creator/${routeId}/dashboard` : '/';
           await router.replace(destination);
         }
       } catch (err) {

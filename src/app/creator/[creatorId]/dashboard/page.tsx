@@ -23,7 +23,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import IntegrationSetupModal from '@/components/dashboard/IntegrationSetupModal';
 
 export default function DashboardOverview() {
   const params = useParams();
@@ -32,11 +34,47 @@ export default function DashboardOverview() {
   const [chartFilter, setChartFilter] = useState('7D');
   const [obsCopied, setObsCopied] = useState(false);
   const [publicCopied, setPublicCopied] = useState(false);
+  const [creatorData, setCreatorData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showSetup, setShowSetup] = useState(false);
+
+  useEffect(() => {
+    async function fetchCreatorData() {
+      // Find the user by either ID or username
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .or(`id.eq.${creatorId},username.eq.${creatorId}`)
+        .single();
+        
+      console.log('Creator Data fetched:', data, error);
+      if (data) {
+        setCreatorData(data);
+        // If they are missing razorpay or youtube info, pop up the integration modal
+        const needsSetup = !data.razorpay_key_id || !data.youtube_channel_id;
+        console.log('Needs setup:', needsSetup);
+        if (needsSetup) {
+          setShowSetup(true);
+        }
+      }
+      setLoading(false);
+    }
+    
+    fetchCreatorData();
+  }, [creatorId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-stone-50 flex items-center justify-center">
+        <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   // Dynamic URLs based on creatorId
-  const publicProfileUrl = `/${creatorId}`;
+  const publicProfileUrl = `/${creatorData?.username || creatorId}`;
   const dashboardBase = `/creator/${creatorId}/dashboard`;
-  const obsUrl = `https://schat.live/obs/${creatorId}`;
+  const obsUrl = `https://schat.live/obs/${creatorData?.username || creatorId}`;
 
   const copyToClipboard = (text: string, type: 'obs' | 'public') => {
     navigator.clipboard.writeText(text);
@@ -53,18 +91,75 @@ export default function DashboardOverview() {
     alert("Test Alert Triggered! Check your OBS.");
   };
 
-  // Mock Graph Data
-  const graphData7D = [40, 70, 45, 90, 65, 30, 100];
-  const graphData30D = [60, 50, 80, 40, 95, 80, 55, 75, 68, 82, 91, 65, 78, 88];
+  // Dynamic Variables based on setup state
+  const isLinked = creatorData?.razorpay_key_id && creatorData?.youtube_channel_id;
+
+  // Mock Graph Data VS Real Graph Data (Simulated fallback if not linked)
+  const graphData7D = isLinked ? [40, 70, 45, 90, 65, 30, 100] : [0, 0, 0, 0, 0, 0, 0];
+  const graphData30D = isLinked ? [60, 50, 80, 40, 95, 80, 55, 75, 68, 82, 91, 65, 78, 88] : Array(14).fill(0);
   const activeGraphData = chartFilter === '7D' ? graphData7D : graphData30D;
   const days = chartFilter === '7D' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : Array.from({length: 14}, (_, i) => `Day ${i+1}`);
 
+  const quickStats = isLinked ? [
+    { label: "Total Revenue", value: "₹1,45,200", icon: DollarSign, color: "text-green-600", bg: "bg-green-100" },
+    { label: "This Month", value: "₹45,200", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-100" },
+    { label: "Avg Donation", value: "₹250", icon: Activity, color: "text-purple-600", bg: "bg-purple-100" },
+    { label: "Top Supporter", value: "Rahul S.", icon: Users, color: "text-orange-600", bg: "bg-orange-100" },
+  ] : [
+    { label: "Total Revenue", value: "₹0", icon: DollarSign, color: "text-gray-400", bg: "bg-gray-100" },
+    { label: "This Month", value: "₹0", icon: TrendingUp, color: "text-gray-400", bg: "bg-gray-100" },
+    { label: "Avg Donation", value: "₹0", icon: Activity, color: "text-gray-400", bg: "bg-gray-100" },
+    { label: "Top Supporter", value: "-", icon: Users, color: "text-gray-400", bg: "bg-gray-100" },
+  ];
+
+  const recentTransactions = isLinked ? [
+    { name: "Rahul Sharma", amount: "₹500", message: "Love the new setup! Keep it up.", time: "2 mins ago" },
+    { name: "Priya Singh", amount: "₹1,000", message: "Can you play that track again?", time: "15 mins ago" },
+    { name: "Anonymous", amount: "₹200", message: "", time: "1 hour ago" },
+    { name: "Tech Bro", amount: "₹5,000", message: "Great insights on the tech stack man.", time: "3 hours ago" },
+  ] : [];
+
+  const activeGoal = isLinked ? {
+    title: "New PC Build",
+    subtitle: "Let's upgrade the stream quality together!",
+    current: 15000,
+    target: 50000,
+    percentage: 30
+  } : null;
+
+  const activeOverlays = isLinked ? [
+    { name: "Chat Box", type: "Active" },
+    { name: "Donation Alerts", type: "Active" },
+    { name: "Goal Bar", type: "Disabled" },
+  ] : [];
+
+  const streamStats = isLinked ? [
+    { label: "Duration", value: "3h 45m", icon: Activity },
+    { label: "Peak Viewers", value: "1,204", icon: Eye },
+    { label: "Avg Viewers", value: "845", icon: Users },
+    { label: "Chat Messages", value: "2,341", icon: MessageSquare },
+  ] : [
+    { label: "Duration", value: "0m", icon: Activity },
+    { label: "Peak Viewers", value: "0", icon: Eye },
+    { label: "Avg Viewers", value: "0", icon: Users },
+    { label: "Chat Messages", value: "0", icon: MessageSquare },
+  ];
+
   return (
-    <main className="min-h-[calc(100vh-64px)] bg-stone-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <main className="min-h-[calc(100vh-64px)] bg-stone-50 p-4 md:p-8 flex flex-col">
+      {showSetup && (
+        <IntegrationSetupModal 
+          creatorData={creatorData} 
+          onComplete={(updatedData) => {
+            setCreatorData(updatedData);
+            setShowSetup(false);
+          }} 
+        />
+      )}
+      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col space-y-6 md:space-y-8">
         
         {/* Top Header & Pulse Navigation */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 md:pb-4">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -77,19 +172,33 @@ export default function DashboardOverview() {
               </span>
               
               {/* Gateway Diagnostics */}
-              <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1 rounded-full text-xs font-bold text-gray-600 shadow-sm">
+              <div 
+                onClick={() => setShowSetup(true)}
+                className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1 rounded-full text-xs font-bold text-gray-600 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                title="Click to open Integration Settings"
+              >
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  {creatorData?.razorpay_key_id ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-red-500 bg-red-100" />
+                  )}
                   Razorpay Route
                 </span>
                 <span className="text-gray-300">|</span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                  OBS Webhook
+                  {creatorData?.youtube_channel_id ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-red-500 bg-red-100" />
+                  )}
+                  YouTube Sync
                 </span>
               </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-gray-900">Welcome back, Ninja</h1>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-gray-900">
+              Welcome back{creatorData?.display_name ? `, ${creatorData.display_name.split(' ')[0]}` : ''}
+            </h1>
             <p className="text-gray-500 text-base md:text-lg font-medium">Your central nervous system for audience interaction.</p>
           </motion.div>
 
@@ -131,7 +240,7 @@ export default function DashboardOverview() {
         </header>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 flex-1">
           
           {/* Main Column (2/3 width on LG) */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
@@ -143,19 +252,15 @@ export default function DashboardOverview() {
               transition={{ delay: 0.1 }}
               className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4"
             >
-              {[
-                { label: "Total Revenue", value: "₹1,45,200", icon: DollarSign, color: "text-green-600", bg: "bg-green-100" },
-                { label: "This Month", value: "₹45,200", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-100" },
-                { label: "Avg Donation", value: "₹250", icon: Activity, color: "text-purple-600", bg: "bg-purple-100" },
-                { label: "Top Supporter", value: "Rahul S.", icon: Users, color: "text-orange-600", bg: "bg-orange-100" },
-              ].map((stat, i) => (
+              {quickStats.map((stat, i) => (
                 <motion.div 
                   key={i} 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  className="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
                 >
+                  {!isLinked && <div className="absolute inset-0 bg-stone-50/50 backdrop-blur-[1px] z-10" />}
                   <div className={`h-10 w-10 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center mb-3`}>
                     <stat.icon className="h-5 w-5" />
                   </div>
@@ -189,26 +294,27 @@ export default function DashboardOverview() {
                 </select>
               </div>
 
-              {/* Minimal CSS Bar Chart */}
-              <div className="h-48 md:h-64 flex items-end gap-1 md:gap-2 px-2">
-                {activeGraphData.map((val, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                    <div className="w-full relative flex justify-center h-full items-end">
-                      <div 
-                        className="w-full bg-gradient-to-t from-blue-500 to-blue-300 rounded-t-lg group-hover:from-blue-600 group-hover:to-blue-400 transition-all duration-300 ease-out relative shadow-sm" 
-                        style={{ height: `${val}%`, minHeight: '8%' }}
-                      >
-                        {/* Tooltip */}
-                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-gray-900 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-opacity whitespace-nowrap pointer-events-none z-10 scale-95 group-hover:scale-100">
-                          ₹{(val * 120).toLocaleString()}
+              <div className="overflow-x-auto pb-2">
+                <div className="h-48 md:h-64 flex items-end gap-1 md:gap-2 px-2 min-w-[500px]">
+                  {activeGraphData.map((val, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                      <div className="w-full relative flex justify-center h-full items-end">
+                        <div 
+                          className="w-full bg-gradient-to-t from-blue-500 to-blue-300 rounded-t-lg group-hover:from-blue-600 group-hover:to-blue-400 transition-all duration-300 ease-out relative shadow-sm" 
+                          style={{ height: `${val}%`, minHeight: '8%' }}
+                        >
+                          {/* Tooltip */}
+                          <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-gray-900 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-opacity whitespace-nowrap pointer-events-none z-10 scale-95 group-hover:scale-100">
+                            ₹{(val * 120).toLocaleString()}
+                          </div>
                         </div>
                       </div>
+                      <span className="text-xs font-bold text-gray-400 group-hover:text-blue-500 transition-colors text-center line-clamp-1">
+                        {days[i]}
+                      </span>
                     </div>
-                    <span className="text-xs font-bold text-gray-400 group-hover:text-blue-500 transition-colors text-center line-clamp-1">
-                      {days[i]}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </motion.div>
 
@@ -231,40 +337,51 @@ export default function DashboardOverview() {
                 </Link>
               </div>
               
-              <div className="p-4 md:p-6 space-y-3 max-h-96 overflow-y-auto">
-                {[
-                  { name: "Rahul Sharma", amount: "₹500", message: "Love the new setup! Keep it up.", time: "2 mins ago" },
-                  { name: "Priya Singh", amount: "₹1,000", message: "Can you play that track again?", time: "15 mins ago" },
-                  { name: "Anonymous", amount: "₹200", message: "", time: "1 hour ago" },
-                  { name: "Tech Bro", amount: "₹5,000", message: "Great insights on the tech stack man.", time: "3 hours ago" },
-                  { name: "Dev Squad", amount: "₹750", message: "Amazing stream today!", time: "4 hours ago" },
-                ].map((tip, i) => (
-                  <div key={i} className="group flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-stone-50 transition-colors border border-transparent hover:border-gray-100 relative">
-                    <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-blue-700 font-bold uppercase shrink-0">
-                        {tip.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-gray-900 text-sm">{tip.name}</p>
-                        {tip.message && (
-                          <p className="text-gray-500 text-xs line-clamp-1 italic">"{tip.message}"</p>
-                        )}
-                      </div>
+              <div className={`p-4 md:p-6 space-y-3 overflow-y-auto relative ${!isLinked || recentTransactions.length === 0 ? 'min-h-[250px] flex items-center justify-center' : 'max-h-96'}`}>
+                {!isLinked ? (
+                  <div className="text-center p-6 bg-stone-50/70 rounded-2xl w-full">
+                    <div className="h-12 w-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 scale-110">
+                      <Zap className="h-6 w-6" />
                     </div>
-                    <div className="text-right flex items-center gap-3 md:gap-4">
-                      {/* Quick Moderation Toggle (Appears on Hover) */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded hover:bg-red-100">
-                          Ban
-                        </button>
-                      </div>
-                      <div className="shrink-0">
-                        <p className="font-black text-green-600 text-base md:text-lg">{tip.amount}</p>
-                        <p className="text-xs text-gray-400 font-medium">{tip.time}</p>
-                      </div>
-                    </div>
+                    <p className="text-gray-500 font-bold mb-3">Connect Integrations to view Feed</p>
+                    <button onClick={() => setShowSetup(true)} className="text-sm shadow-sm text-blue-600 bg-blue-50 px-5 py-2.5 rounded-xl font-bold hover:bg-blue-100 transition-colors">
+                      Setup Now
+                    </button>
                   </div>
-                ))}
+                ) : recentTransactions.length === 0 ? (
+                  <div className="text-center p-6">
+                    <p className="text-gray-500 font-bold">No transactions yet.</p>
+                    <p className="text-gray-400 text-sm mt-1">Start streaming to get your first tip!</p>
+                  </div>
+                ) : (
+                  recentTransactions.map((tip, i) => (
+                    <div key={i} className="group flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-stone-50 transition-colors border border-transparent hover:border-gray-100 relative w-full">
+                      <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-blue-700 font-bold uppercase shrink-0">
+                          {tip.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-gray-900 text-sm">{tip.name}</p>
+                          {tip.message && (
+                            <p className="text-gray-500 text-xs line-clamp-1 italic">"{tip.message}"</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right flex items-center gap-3 md:gap-4">
+                        {/* Quick Moderation Toggle (Appears on Hover) */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded hover:bg-red-100">
+                            Ban
+                          </button>
+                        </div>
+                        <div className="shrink-0">
+                          <p className="font-black text-green-600 text-base md:text-lg">{tip.amount}</p>
+                          <p className="text-xs text-gray-400 font-medium">{tip.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </motion.div>
 
@@ -308,33 +425,43 @@ export default function DashboardOverview() {
                   <Target className="h-5 w-5" />
                 </div>
                 <button className="px-3 md:px-4 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-bold rounded-lg border border-gray-200 transition-all shadow-sm">
-                  Edit Goal
+                  {activeGoal ? 'Edit Goal' : 'Create Goal'}
                 </button>
               </div>
 
-              <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">New PC Build</h3>
-              <p className="text-gray-500 text-sm font-medium mb-4 md:mb-6">Let's upgrade the stream quality together!</p>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs md:text-sm font-black text-gray-900">
-                  <span>₹15,000</span>
-                  <span className="text-gray-400">₹50,000</span>
+              {activeGoal ? (
+                <>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">{activeGoal.title}</h3>
+                  <p className="text-gray-500 text-sm font-medium mb-4 md:mb-6">{activeGoal.subtitle}</p>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-xs md:text-sm font-black text-gray-900">
+                      <span>₹{activeGoal.current.toLocaleString()}</span>
+                      <span className="text-gray-400">₹{activeGoal.target.toLocaleString()}</span>
+                    </div>
+                    
+                    {/* Progress Bar Container */}
+                    <div className="h-3 md:h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                      <motion.div 
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${activeGoal.percentage}%` }}
+                        transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
+                      />
+                    </div>
+                    
+                    <div className="text-right">
+                      <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg inline-block">{activeGoal.percentage}% Complete</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4 bg-stone-50 rounded-2xl border border-gray-100 border-dashed">
+                  <Target className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 font-bold mb-1">No Active Goal</p>
+                  <p className="text-gray-400 text-xs px-4">Set a financial target to give viewers something to rally towards.</p>
                 </div>
-                
-                {/* Progress Bar Container */}
-                <div className="h-3 md:h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                  <motion.div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                    initial={{ width: 0 }}
-                    animate={{ width: "30%" }}
-                    transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
-                  />
-                </div>
-                
-                <div className="text-right">
-                  <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg inline-block">30% Complete</span>
-                </div>
-              </div>
+              )}
             </motion.div>
 
             {/* Active Overlays */}
@@ -349,24 +476,27 @@ export default function DashboardOverview() {
                 <h3 className="font-bold text-gray-900 text-base md:text-lg">Active Overlays</h3>
               </div>
               <div className="space-y-2">
-                {[
-                  { name: "Chat Box", type: "Active" },
-                  { name: "Donation Alerts", type: "Active" },
-                  { name: "Goal Bar", type: "Disabled" },
-                ].map((overlay, i) => (
-                  <div key={i} className="flex justify-between items-center p-2.5 md:p-3 bg-stone-50 rounded-lg md:rounded-xl border border-gray-100 text-xs md:text-sm">
-                    <div>
-                      <p className="font-bold text-gray-900">{overlay.name}</p>
+                {activeOverlays.length > 0 ? (
+                  activeOverlays.map((overlay, i) => (
+                    <div key={i} className="flex justify-between items-center p-2.5 md:p-3 bg-stone-50 rounded-lg md:rounded-xl border border-gray-100 text-xs md:text-sm shadow-sm transition-transform hover:scale-[1.01]">
+                      <div>
+                        <p className="font-bold text-gray-900">{overlay.name}</p>
+                      </div>
+                      <span className={`font-bold px-2.5 py-1 rounded-lg ${overlay.type === 'Active' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
+                        {overlay.type}
+                      </span>
                     </div>
-                    <span className={`font-bold px-2.5 py-1 rounded-lg ${overlay.type === 'Active' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
-                      {overlay.type}
-                    </span>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center text-gray-400 py-4">
+                    <Layers className="h-6 w-6 mb-2 opacity-50" />
+                    <p className="text-sm font-bold">No Overlays Configured</p>
                   </div>
-                ))}
+                )}
               </div>
               <Link 
                 href={`${dashboardBase}/overlays`}
-                className="mt-4 w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 bg-gray-50 text-gray-700 hover:bg-gray-100 font-bold rounded-lg md:rounded-xl border border-gray-200 transition-all text-xs md:text-sm"
+                className="mt-6 w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 bg-gray-50 text-gray-700 hover:bg-gray-100 font-bold rounded-lg md:rounded-xl border border-gray-200 transition-all text-xs md:text-sm shadow-sm"
               >
                 View All Overlays
               </Link>
@@ -379,35 +509,36 @@ export default function DashboardOverview() {
               transition={{ delay: 0.4 }}
               className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm"
             >
-              <h3 className="font-bold text-gray-900 text-base md:text-lg mb-4">Last Stream Stats</h3>
+              <div className="flex items-center gap-2 mb-4 md:mb-6">
+                <Activity className="h-5 w-5 text-gray-400" />
+                <h3 className="font-bold text-gray-900 text-base md:text-lg">Last Stream Stats</h3>
+              </div>
               <div className="space-y-3">
-                {[
-                  { label: "Duration", value: "3h 45m", icon: Activity },
-                  { label: "Peak Viewers", value: "1,204", icon: Eye },
-                  { label: "Avg Viewers", value: "845", icon: Users },
-                  { label: "Chat Messages", value: "2,341", icon: MessageSquare },
-                ].map((stat, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl">
+                {streamStats.map((stat, i) => (
+                  <div key={i} className="flex items-center justify-between p-3.5 bg-stone-50 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200">
                     <div className="flex items-center gap-3">
-                      <stat.icon className="h-4 w-4 text-gray-400" />
+                      <stat.icon className={`h-4 w-4 ${isLinked ? 'text-gray-500' : 'text-gray-300'}`} />
                       <span className="text-sm font-bold text-gray-700">{stat.label}</span>
                     </div>
-                    <span className="text-sm font-black text-gray-900">{stat.value}</span>
+                    <span className={`text-sm font-black ${isLinked ? 'text-gray-900' : 'text-gray-400'}`}>
+                      {stat.value}
+                    </span>
                   </div>
                 ))}
               </div>
             </motion.div>
 
           </div>
+        </div>{/* End of Dashboard Grid */}
 
-          {/* Quick Links */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm col-span-full"
-          >
-            <h3 className="font-bold text-gray-900 text-base md:text-lg mb-4">Quick Access</h3>
+        {/* Quick Links */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="bg-white border border-gray-100 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm w-full mt-auto mb-4"
+        >
+          <h3 className="font-bold text-gray-900 text-base md:text-lg mb-4">Quick Access</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
                 { label: 'Financials', icon: DollarSign, href: `${dashboardBase}/financials` },
@@ -430,9 +561,8 @@ export default function DashboardOverview() {
                 );
               })}
             </div>
-          </motion.div>
+        </motion.div>
 
-        </div>
       </div>
     </main>
   );

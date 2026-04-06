@@ -24,7 +24,8 @@ function OnboardingContent() {
   const role = paramRole === 'creator' || paramRole === 'donor' ? paramRole : 'creator';
   const uid = searchParams.get('uid');
   
-  const destination = role === 'creator' && uid ? `/creator/${uid}/dashboard` : '/';
+  // Use the uniquely generated username as the destination instead of the raw database ID
+  const destination = role === 'creator' && username ? `/creator/${username}/dashboard` : '/';
 
   // Load existing data if available
   useEffect(() => {
@@ -48,10 +49,14 @@ function OnboardingContent() {
     setError(null);
 
     try {
+      // 1. First format username to be URL safe
+      const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+      // 2. Save user data
       const { error: updateError } = await supabase
         .from('users')
         .update({
-          username,
+          username: cleanUsername,
           display_name: displayName,
           bio,
           social_links: {
@@ -61,9 +66,15 @@ function OnboardingContent() {
         })
         .eq('id', uid);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        if (updateError.code === '23505') {
+           throw new Error('This username is already taken. Please choose another one.');
+        }
+        throw updateError;
+      }
       
-      router.push(destination);
+      // 3. Instead of pushing to the UUID, push to their newly created username clean route
+      router.push(`/creator/${cleanUsername}/dashboard`);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Something went wrong saving your profile.');
